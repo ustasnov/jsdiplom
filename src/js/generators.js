@@ -19,7 +19,9 @@ export function* characterGenerator(allowedTypes, maxLevel) {
   while (true) {
     const typeId = randomInteger(0, allowedTypes.length - 1);
     const level = randomInteger(1, maxLevel);
-    yield new allowedTypes[typeId](level);
+    const character = new allowedTypes[typeId](1);
+    character.increaseLevel(level);
+    yield character;
   }
 }
 

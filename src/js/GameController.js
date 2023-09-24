@@ -12,68 +12,86 @@ import Cell from './Cell';
 import Team from './Team';
 import GamePlay from './GamePlay';
 import cursors from './cursors';
-import { calculateCellsForMove, calculateCellsForAttack } from './utils';
+import { calculateCellsForMove, calculateCellsForAttack, roundToInt } from './utils';
 
 export default class GameController {
   constructor(gamePlay, stateService) {
     this.gamePlay = gamePlay;
     this.stateService = stateService;
+    this.rounds = 4;
+    this.gameRound = 0;
+    this.score = [0, 0];
     this.positionedCharacters = [];
+    this.playerTypes = [Bowman, Swordsman, Magician];
+    this.rivalTypes = [Vampire, Undead, Daemon];
     this.playerTeam = new Team([]);
     this.rivalTeam = new Team([]);
+    this.playerAlive = 4;
+    this.rivalAlive = 4;
     this.selectedIndex = -1;
     this.selectedGreenIndex = -1;
     this.selectedRedIndex = -1;
     this.cellsForMove = [];
     this.cellsForAttack = [];
     this.gameState = {
+      gameRound: 1,
       playerTurn: true,
       characters: null,
       selectedIndex: -1,
     };
   }
 
-  init() {
-    // TODO: add event listeners to gamePlay events
-    // TODO: load saved stated from stateService
-    this.gamePlay.drawUi(themes.mountain);
+  get theme() {
+    let currentTheme = 'prairie';
+    switch (this.gameRound) {
+      case 2:
+        currentTheme = themes.desert;
+        break;
+      case 3:
+        currentTheme = themes.arctic;
+        break;
+      case 4:
+        currentTheme = themes.mountain;
+        break;
+    }
+    return currentTheme;
+  }
 
+  placeTeam(curTeam) {
     const bs = this.gamePlay.boardSize;
     const tbs = bs * 2;
-    const playerTypes = [Bowman, Swordsman, Magician];
-    const rivalTypes = [Vampire, Undead, Daemon];
     const occupiedPositions = [];
+    const columns = [0, 1];
+    if (curTeam == this.rivalTeam) {
+      columns[0] = bs - 2;
+      columns[1] = bs - 1;
+    }
 
-    this.playerTeam = generateTeam(playerTypes, 2, 4);
-    Array.from(this.playerTeam.characters).forEach((element) => {
+    Array.from(curTeam.characters).forEach((element) => {
       let randIndex = randomInteger(0, tbs - 1);
-      while (occupiedPositions.indexOf(randIndex) !== -1) {
+      while (occupiedPositions.indexOf(randIndex) > -1) {
         randIndex = randomInteger(0, tbs - 1);
       }
       occupiedPositions.push(randIndex);
       const curIndex = randIndex < bs
-        ? new Cell(randIndex, 0, bs).index
-        : new Cell(randIndex - bs, 1, bs).index;
-      const positionedCharacter = new PositionedCharacter(element, curIndex);
-      this.positionedCharacters.push(positionedCharacter);
+        ? new Cell(randIndex, columns[0], bs).index
+        : new Cell(randIndex - bs, columns[1], bs).index;
+      this.positionedCharacters.push(new PositionedCharacter(element, curIndex));
     });
+  }
 
-    this.rivalTeam = generateTeam(rivalTypes, 2, 4);
-    Array.from(this.rivalTeam.characters).forEach((element) => {
-      let randIndex = randomInteger(0, tbs - 1);
-      while (occupiedPositions.indexOf(randIndex) !== -1) {
-        randIndex = randomInteger(0, tbs - 1);
-      }
-      occupiedPositions.push(randIndex);
-      const curIndex = randIndex < bs
-        ? new Cell(randIndex, bs - 2, bs).index
-        : new Cell(randIndex - bs, bs - 1, bs).index;
-      const posCharacter = new PositionedCharacter(element, curIndex);
-      this.positionedCharacters.push(posCharacter);
-    });
+  init() {
+    this.gameRound = 0;
+    this.score[0] = 0;
+    this.score[1] = 0;
 
-    this.gamePlay.redrawPositions(this.positionedCharacters);
+    this.playerTeam = generateTeam(this.playerTypes, 2, 4); // создаем команду игрока
+    this.rivalTeam = generateTeam(this.rivalTypes, 2, 4); // создаем команду противника
+    this.startRound();
 
+    this.gamePlay.addNewGameListener(this.onNewGame.bind(this));
+    this.gamePlay.addSaveGameListener(this.onSaveGame.bind(this));
+    this.gamePlay.addLoadGameListener(this.onLoadGame.bind(this));
     this.gamePlay.addCellEnterListener(this.onCellEnter.bind(this));
     this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
 
@@ -81,10 +99,83 @@ export default class GameController {
     this.stateService.save(this.gameState);
   }
 
+  gameOver(byEndOfGame = true) {
+    if (!byEndOfGame) {
+      if (!confirm('Начать новую игру?')) {
+        return true;
+      }
+    }
+    if (this.selectedIndex > -1) {
+      this.gamePlay.deselectCell(this.selectedIndex);
+      this.selectedIndex = -1;
+    }
+    this.positionedCharacters = [];
+    this.gamePlay.redrawPositions(this.positionedCharacters);
+    this.gamePlay.cellClickListeners = [];
+    this.gamePlay.cellEnterListeners = [];
+
+    if (byEndOfGame) {
+      if (this.score[0] > this.score[1]) {
+        GamePlay.showMessage(`Игра окончена: вы выиграли. Общий счет ${this.score[0]}:${this.score[1]}`);
+      } else {
+        GamePlay.showMessage(`Игра окончена: вы проиграги. Общий счет ${this.score[0]}:${this.score[1]}`);
+      }
+    } else {
+      this.gamePlay.newGameListeners = [];
+      this.gamePlay.saveGameListeners = [];
+      this.gamePlay.loadGameListeners = [];
+    }
+    return true;
+  }
+
+  startRound() {
+    this.gameRound += 1;
+    this.gameState.playerTurn = true;
+    this.playerAlive = 4;
+    this.rivalAlive = 4;
+    this.positionedCharacters = [];
+    this.gamePlay.drawUi(this.theme);
+    this.placeTeam(this.playerTeam); // размещаем команду игрока
+    this.placeTeam(this.rivalTeam); // размещаем команду противника
+    this.gamePlay.redrawPositions(this.positionedCharacters);
+  }
+
+  nextRound() {
+    let youWin = true;
+    if (this.playerTeam.characters.indexOf(this.positionedCharacters[0].character) > -1) {
+      this.score[0] += 1;
+    } else {
+      this.score[1] += 1;
+      youWin = false;
+    }
+    if (this.gameRound === this.rounds) {
+      this.gameOver();
+    } else {
+      // повышаем всем здоровье и уровень выжившим персонажам
+      Array.from(this.playerTeam.characters).forEach((el) =>
+        el.increaseLevel(el.level + 1));
+      Array.from(this.rivalTeam.characters).forEach((el) =>
+        el.increaseLevel(el.level + 1));
+      if (this.selectedIndex > -1) {
+        this.gamePlay.deselectCell(this.selectedIndex);
+        this.selectedIndex = -1;
+      }
+      this.positionedCharacters = [];
+      this.gamePlay.drawUi(this.theme);
+      if (youWin) {
+        GamePlay.showMessage(`Вы выиграли этот раунд. Общий счет ${this.score[0]}:${this.score[1]}`);
+      } else {
+        GamePlay.showMessage(`Вы проиграли этот раунд. Общий счет ${this.score[0]}:${this.score[1]}`);
+      }
+      this.startRound(); // стартуем следующий раунд
+    }
+  }
+
   getCellsForMove(posCharacter) {
     const cells = calculateCellsForMove(posCharacter, this.gamePlay.boardSize);
     // перемещаться можно только на незанятые ячейки
-    this.cellsForMove = cells.filter((value) => typeof Array.from(this.positionedCharacters).find((posIdx) => posIdx === value) === 'undefined');
+    this.cellsForMove = cells.filter((value) =>
+      (typeof Array.from(this.positionedCharacters).find((el) => el.position === value)) === 'undefined');
   }
 
   getCellsForAttack(posCharacter) {
@@ -101,14 +192,20 @@ export default class GameController {
 
   attack(attacker, targetIndex) {
     const target = Array.from(this.positionedCharacters).find((el) => el.position === targetIndex);
-    const damage = Math.max(attacker.character.attack - target.character.defence, attacker.character.attack * 0.1);
+    const damage = roundToInt(Math.max(attacker.character.attack - target.character.defence, attacker.character.attack * 0.1));
     this.gamePlay.showDamage(target.position, damage).then(() => {
-      target.character.health -= damage;
-      if (target.character.health <= 0) {
+      target.character.health = Math.max(target.character.health - damage, 0);
+      if (target.character.health === 0) {
         this.died(target);
-      } else {
-        this.gamePlay.redrawPositions(this.positionedCharacters);
+        if (this.playerAlive > 0 && this.rivalAlive > 0) {
+          console.log(`Player alive: ${this.playerAlive}, rival alive: ${this.rivalAlive}`);
+        } else {
+          console.log(`End of the round - Player alive: ${this.playerAlive}, rival alive: ${this.rivalAlive}`);
+          this.nextRound(); // завершаем раунд или игру
+          return;
+        }
       }
+      this.gamePlay.redrawPositions(this.positionedCharacters);
       this.passMove(); // передаем ход
     });
   }
@@ -122,14 +219,25 @@ export default class GameController {
       this.gamePlay.deselectCell(this.selectedRedIndex);
       this.selectedRedIndex = -1;
     }
+    if (this.playerTeam.characters.indexOf(posCharacter.character) > -1) {
+      console.log('Атакован персонаж игрока');
+      this.playerAlive -= 1;
+    } else {
+      console.log('Атакован персонаж противника');
+      this.rivalAlive -= 1;
+    }
     this.positionedCharacters.splice(this.positionedCharacters.indexOf(posCharacter), 1);
+
     this.gamePlay.redrawPositions(this.positionedCharacters);
   }
 
   getTargets() {
     const targets = Array.from(this.cellsForAttack).filter((cell) => {
       const posCharacter = Array.from(this.positionedCharacters).find((element) => element.position === cell);
-      return posCharacter ? this.playerTeam.characters.indexOf(posCharacter.character) !== -1 : false;
+      if (posCharacter) {
+        return this.playerTeam.characters.indexOf(posCharacter.character) > -1;
+      }
+      return false;
     });
     return targets;
   }
@@ -145,7 +253,8 @@ export default class GameController {
 
   rivalTurn() {
     // определяем кто в строю у соперника
-    const alive = Array.from(this.positionedCharacters).filter((element) => this.rivalTeam.characters.indexOf(element.character) !== -1);
+    const alive = Array.from(this.positionedCharacters).filter((element) =>
+      this.rivalTeam.characters.indexOf(element.character) > -1);
     if (alive.length > 0) {
       // выбираем кандидата на выполнение атаки
       let candidate = null;
@@ -165,8 +274,9 @@ export default class GameController {
       if (candidate) { // атакуем
         this.getCellsForAttack(candidate);
         targets = this.getTargets();
-        this.attack(candidate, targets[0]);
+        this.attack(candidate, targets[randomInteger(0, targets.length - 1)]);
       } else { // выбираем кандидата на ход
+        candidate = null;
         let maxDefence = 0;
         for (let i = 0; i < alive.length; i += 1) {
           if (alive[i].character.defence > maxDefence) { // выбираем персонаж с наибольшим уровнем защиты
@@ -176,10 +286,7 @@ export default class GameController {
         }
         if (candidate) { // ходим
           this.getCellsForMove(candidate);
-          const randIndex = randomInteger(0, this.cellsForMove.length - 1);
-          this.moveCharacter(candidate.position, randIndex);
-        } else {
-          this.passMove(); // передаем ход
+          this.moveCharacter(candidate.position, this.cellsForMove[randomInteger(0, this.cellsForMove.length - 1)]);
         }
       }
     }
@@ -252,5 +359,20 @@ export default class GameController {
 
   onCellLeave(index) {
     this.gamePlay.hideCellTooltip(index);
+  }
+
+  onNewGame() {
+    if (!this.gameOver(false)) {
+      return;
+    }
+    this.init();
+  }
+
+  onSaveGame() {
+
+  }
+
+  onLoadGame() {
+
   }
 }

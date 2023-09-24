@@ -54,6 +54,10 @@ export function calcTileType(index, boardSize) {
   return 'center';
 }
 
+export function roundToInt(value) {
+  return parseInt(Math.round(value).toFixed(0));
+}
+
 export function calcHealthLevel(health) {
   if (health < 15) {
     return 'critical';
