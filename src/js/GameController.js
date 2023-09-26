@@ -13,6 +13,7 @@ import Team from './Team';
 import GamePlay from './GamePlay';
 import cursors from './cursors';
 import { calculateCellsForMove, calculateCellsForAttack, roundToInt } from './utils';
+import { resolve } from 'core-js/stable/promise';
 
 export default class GameController {
   constructor(gamePlay, stateService) {
@@ -34,9 +35,12 @@ export default class GameController {
     this.cellsForMove = [];
     this.cellsForAttack = [];
     this.gameState = {
-      gameRound: 1,
+      playerTeam: null,
+      rivalTeam: null,
+      score: [0, 0],
+      gameRound: 0,
       playerTurn: true,
-      characters: null,
+      characters: [],
       selectedIndex: -1,
     };
   }
@@ -96,7 +100,7 @@ export default class GameController {
     this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
 
     this.gameState.characters = this.positionedCharacters;
-    this.stateService.save(this.gameState);
+    //this.stateService.save(this.gameState);
   }
 
   gameOver(byEndOfGame = true) {
@@ -105,26 +109,31 @@ export default class GameController {
         return true;
       }
     }
-    if (this.selectedIndex > -1) {
-      this.gamePlay.deselectCell(this.selectedIndex);
-      this.selectedIndex = -1;
-    }
-    this.positionedCharacters = [];
-    this.gamePlay.redrawPositions(this.positionedCharacters);
-    this.gamePlay.cellClickListeners = [];
-    this.gamePlay.cellEnterListeners = [];
-
-    if (byEndOfGame) {
-      if (this.score[0] > this.score[1]) {
-        GamePlay.showMessage(`Игра окончена: вы выиграли. Общий счет ${this.score[0]}:${this.score[1]}`);
-      } else {
-        GamePlay.showMessage(`Игра окончена: вы проиграги. Общий счет ${this.score[0]}:${this.score[1]}`);
+    const res = new Promise((resolve, reject) => {
+      if (this.selectedIndex > -1) {
+        this.gamePlay.deselectCell(this.selectedIndex);
+        this.selectedIndex = -1;
       }
-    } else {
-      this.gamePlay.newGameListeners = [];
-      this.gamePlay.saveGameListeners = [];
-      this.gamePlay.loadGameListeners = [];
-    }
+      this.positionedCharacters = [];
+      this.gamePlay.redrawPositions(this.positionedCharacters);
+      this.gamePlay.cellClickListeners = [];
+      this.gamePlay.cellEnterListeners = [];
+      resolve();
+    }).then((value) => {
+      setTimeout(() => {
+        if (byEndOfGame) {
+          if (this.score[0] > this.score[1]) {
+            GamePlay.showMessage(`Игра окончена: вы выиграли. Общий счет ${this.score[0]}:${this.score[1]}`);
+          } else {
+            GamePlay.showMessage(`Игра окончена: вы проиграги. Общий счет ${this.score[0]}:${this.score[1]}`);
+          }
+        } else {
+          this.gamePlay.newGameListeners = [];
+          this.gamePlay.saveGameListeners = [];
+          this.gamePlay.loadGameListeners = [];
+        }
+      }, 200);
+    });
     return true;
   }
 
@@ -151,23 +160,30 @@ export default class GameController {
     if (this.gameRound === this.rounds) {
       this.gameOver();
     } else {
-      // повышаем всем здоровье и уровень выжившим персонажам
-      Array.from(this.playerTeam.characters).forEach((el) =>
-        el.increaseLevel(el.level + 1));
-      Array.from(this.rivalTeam.characters).forEach((el) =>
-        el.increaseLevel(el.level + 1));
-      if (this.selectedIndex > -1) {
-        this.gamePlay.deselectCell(this.selectedIndex);
-        this.selectedIndex = -1;
-      }
-      this.positionedCharacters = [];
-      this.gamePlay.drawUi(this.theme);
-      if (youWin) {
-        GamePlay.showMessage(`Вы выиграли этот раунд. Общий счет ${this.score[0]}:${this.score[1]}`);
-      } else {
-        GamePlay.showMessage(`Вы проиграли этот раунд. Общий счет ${this.score[0]}:${this.score[1]}`);
-      }
-      this.startRound(); // стартуем следующий раунд
+      const res = new Promise((resolve, reject) => {
+        // повышаем всем здоровье и уровень выжившим персонажам
+        Array.from(this.playerTeam.characters).forEach((el) =>
+          el.increaseLevel(el.level + 1));
+        Array.from(this.rivalTeam.characters).forEach((el) =>
+          el.increaseLevel(el.level + 1));
+        if (this.selectedIndex > -1) {
+          this.gamePlay.deselectCell(this.selectedIndex);
+          this.selectedIndex = -1;
+        }
+        this.positionedCharacters = [];
+        //this.gamePlay.drawUi(this.theme);
+        this.gamePlay.redrawPositions(this.positionedCharacters);
+        resolve();
+      }).then((value) => {
+        setTimeout(() => {
+          if (youWin) {
+            GamePlay.showMessage(`Вы выиграли этот раунд. Общий счет ${this.score[0]}:${this.score[1]}`);
+          } else {
+            GamePlay.showMessage(`Вы проиграли этот раунд. Общий счет ${this.score[0]}:${this.score[1]}`);
+          }
+          this.startRound(); // стартуем следующий раунд
+        }, 200);
+      });
     }
   }
 
@@ -298,14 +314,14 @@ export default class GameController {
     }
     const posCharacter = Array.from(this.positionedCharacters).find((el) => el.position === index);
     if (posCharacter) { // кликнули на занятую ячейку
-      if (this.playerTeam.characters.indexOf(posCharacter.character) !== -1) { // ячейка занята персонажем игрока
+      if (this.playerTeam.characters.indexOf(posCharacter.character) > -1) { // ячейка занята персонажем игрока
         if (this.selectedIndex !== -1) { // снимаем выделение с ранее выбранной ячейки
           this.gamePlay.deselectCell(this.selectedIndex);
         }
         this.gamePlay.selectCell(index);
         this.selectedIndex = index;
-        this.gameState.selectedIndex = index;
-        this.stateService.save(this.gameState);
+        //this.gameState.selectedIndex = index;
+        //this.stateService.save(this.gameState);
         // вычисляем доступные для перемещения и атаки поля
         this.getCellsForMove(posCharacter);
         this.getCellsForAttack(posCharacter);
@@ -336,7 +352,7 @@ export default class GameController {
     }
     const posCharacter = Array.from(this.positionedCharacters).find((el) => el.position === index);
     if (posCharacter) {
-      if (this.playerTeam.characters.indexOf(posCharacter.character) !== -1) { // свой персонаж
+      if (this.playerTeam.characters.indexOf(posCharacter.character) !== -1) { // персонаж игрока
         this.gamePlay.setCursor(cursors.pointer);
       } else if (this.rivalTeam.characters.indexOf(posCharacter.character) !== -1) { // персонаж противника
         if (this.cellsForAttack.indexOf(posCharacter.position) !== -1 && this.selectedIndex !== -1) { // выбран персонаж игрока и персонаж противника доступен для атаки
@@ -369,10 +385,69 @@ export default class GameController {
   }
 
   onSaveGame() {
+    if (!confirm('Сохранить игру?')) {
+      return;
+    }
 
+    this.gameState.playerTeam = this.playerTeam;
+    this.gameState.rivalTeam = this.rivalTeam;
+    this.gameState.score = this.score;
+    this.gameState.gameRound = this.Round;
+    this.gameState.playerTurn = true;
+    this.gameState.characters = this.positionedCharacters;
+    this.gameState.selectedIndex = this.selectedIndex;
+
+    try {
+      this.stateService.save(this.gameState);
+    } catch (e) {
+      GamePlay.showError(`Игра не сохранена из-за ошибки: ${e.message}`);
+      return;
+    }
+
+    GamePlay.showMessage('Игра успешно сохранена.');
   }
 
   onLoadGame() {
+    if (!confirm('Загрузить ранее сохраненную игру?')) {
+      return;
+    }
+    try {
+      this.gameState = this.stateService.load();
+    } catch (e) {
+      GamePlay.showError(`Не удалось загрузить игру из-за ошибки: ${e.message}`);
+      return;
+    }
+
+    if (this.selectedGreenIndex !== -1 && this.selectedIndex !== this.selectedGreenIndex) {
+      this.gamePlay.deselectCell(this.selectedGreenIndex);
+      this.selectedGreenIndex = -1;
+    }
+    if (this.selectedRedIndex !== -1 && this.selectedIndex !== this.selectedRedIndex) {
+      this.gamePlay.deselectCell(this.selectedRedIndex);
+      this.selectedRedIndex = -1;
+    }
+
+    this.playerTeam = this.gameState.playerTeam;
+    this.rivalTeam = this.gameState.rivalTeam;
+    this.score = this.gameState.score;
+    this.Round = this.gameState.gameRound;
+    this.gameState.playerTurn = true;
+    this.positionedCharacters = this.gameState.characters;
+    this.selectedIndex = this.gameState.selectedIndex;
+
+    this.gamePlay.drawUi(this.theme);
+
+    this.gamePlay.redrawPositions(this.positionedCharacters);
+
+    /*
+    this.gamePlay.cellClickListeners = [];
+    this.gamePlay.cellEnterListeners = [];
+
+    this.gamePlay.addCellEnterListener(this.onCellEnter.bind(this));
+    this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
+    */
+
+    this.onCellClick(this.selectedIndex);
 
   }
 }
