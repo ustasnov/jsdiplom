@@ -12,6 +12,7 @@ import Cell from './Cell';
 import Team from './Team';
 import GamePlay from './GamePlay';
 import cursors from './cursors';
+import GameState from './GameState';
 import { calculateCellsForMove, calculateCellsForAttack, roundToInt } from './utils';
 import { resolve } from 'core-js/stable/promise';
 
@@ -40,6 +41,8 @@ export default class GameController {
       score: [0, 0],
       gameRound: 0,
       playerTurn: true,
+      playerAlive: 4,
+      rivalAlive: 4,
       characters: [],
       selectedIndex: -1,
     };
@@ -99,7 +102,7 @@ export default class GameController {
     this.gamePlay.addCellEnterListener(this.onCellEnter.bind(this));
     this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
 
-    this.gameState.characters = this.positionedCharacters;
+    //this.gameState.characters = this.positionedCharacters;
     //this.stateService.save(this.gameState);
   }
 
@@ -131,6 +134,7 @@ export default class GameController {
           this.gamePlay.newGameListeners = [];
           this.gamePlay.saveGameListeners = [];
           this.gamePlay.loadGameListeners = [];
+          this.init();
         }
       }, 200);
     });
@@ -315,6 +319,8 @@ export default class GameController {
     const posCharacter = Array.from(this.positionedCharacters).find((el) => el.position === index);
     if (posCharacter) { // кликнули на занятую ячейку
       if (this.playerTeam.characters.indexOf(posCharacter.character) > -1) { // ячейка занята персонажем игрока
+        //const playerType = this.playerTypes.find((el) => posCharacter.character instanceof el);
+        //if (playerType) {
         if (this.selectedIndex !== -1) { // снимаем выделение с ранее выбранной ячейки
           this.gamePlay.deselectCell(this.selectedIndex);
         }
@@ -381,7 +387,7 @@ export default class GameController {
     if (!this.gameOver(false)) {
       return;
     }
-    this.init();
+    //this.init();
   }
 
   onSaveGame() {
@@ -392,8 +398,10 @@ export default class GameController {
     this.gameState.playerTeam = this.playerTeam;
     this.gameState.rivalTeam = this.rivalTeam;
     this.gameState.score = this.score;
-    this.gameState.gameRound = this.Round;
+    this.gameState.gameRound = this.gameRound;
     this.gameState.playerTurn = true;
+    this.gameState.playerAlive = this.playerAlive;
+    this.gameState.rivalAlive = this.rivalAlive;
     this.gameState.characters = this.positionedCharacters;
     this.gameState.selectedIndex = this.selectedIndex;
 
@@ -418,36 +426,39 @@ export default class GameController {
       return;
     }
 
-    if (this.selectedGreenIndex !== -1 && this.selectedIndex !== this.selectedGreenIndex) {
-      this.gamePlay.deselectCell(this.selectedGreenIndex);
-      this.selectedGreenIndex = -1;
-    }
-    if (this.selectedRedIndex !== -1 && this.selectedIndex !== this.selectedRedIndex) {
-      this.gamePlay.deselectCell(this.selectedRedIndex);
-      this.selectedRedIndex = -1;
-    }
+    this.selectedGreenIndex = -1;
+    this.selectedRedIndex = -1;
+    this.selectedIndex = -1;
 
+    this.gamePlay.cellClickListeners = [];
+    this.gamePlay.cellEnterListeners = [];
+    this.gamePlay.loadGameListeners = [];
+    this.gamePlay.saveGameListeners = [];
+    this.gamePlay.newGameListeners = [];
+
+    this.gamePlay.addNewGameListener(this.onNewGame.bind(this));
+    this.gamePlay.addSaveGameListener(this.onSaveGame.bind(this));
+    this.gamePlay.addLoadGameListener(this.onLoadGame.bind(this));
+    this.gamePlay.addCellEnterListener(this.onCellEnter.bind(this));
+    this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
+
+    this.gameState = GameState.from(this.gameState);
+
+    this.gameRound = this.gameState.gameRound;
+    this.gameState.playerTurn = true;
+    this.score = this.gameState.score;
     this.playerTeam = this.gameState.playerTeam;
     this.rivalTeam = this.gameState.rivalTeam;
-    this.score = this.gameState.score;
-    this.Round = this.gameState.gameRound;
-    this.gameState.playerTurn = true;
-    this.positionedCharacters = this.gameState.characters;
-    this.selectedIndex = this.gameState.selectedIndex;
+    this.playerAlive = this.gameState.playerAlive;
+    this.rivalAlive = this.gameState.rivalAlive;
 
     this.gamePlay.drawUi(this.theme);
 
+    this.positionedCharacters = this.gameState.characters;
     this.gamePlay.redrawPositions(this.positionedCharacters);
+    this.selectedIndex = this.gameState.selectedIndex;
 
-    /*
-    this.gamePlay.cellClickListeners = [];
-    this.gamePlay.cellEnterListeners = [];
-
-    this.gamePlay.addCellEnterListener(this.onCellEnter.bind(this));
-    this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
-    */
-
-    this.onCellClick(this.selectedIndex);
+    this.onCellClick(this.gameState.selectedIndex);
 
   }
 }

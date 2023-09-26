@@ -31,9 +31,9 @@ export default class GamePlay {
 
     this.container.innerHTML = `
       <div class="controls">
-        <button data-id="action-restart" class="btn">New Game</button>
-        <button data-id="action-save" class="btn">Save Game</button>
-        <button data-id="action-load" class="btn">Load Game</button>
+        <button data-id="action-restart" class="btn">Новая игра</button>
+        <button data-id="action-save" class="btn">Сохранить игру</button>
+        <button data-id="action-load" class="btn">Загрузить игру</button>
       </div>
       <div class="board-container">
         <div data-id="board" class="board"></div>
