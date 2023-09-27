@@ -1,4 +1,7 @@
 /* eslint-disable max-len */
+/* eslint-disable no-restricted-globals */
+/* eslint-disable no-alert */
+// import { resolve } from 'core-js/stable/promise';
 import Bowman from './Bowman';
 import Swordsman from './Swordsman';
 import Magician from './Magician';
@@ -14,7 +17,6 @@ import GamePlay from './GamePlay';
 import cursors from './cursors';
 import GameState from './GameState';
 import { calculateCellsForMove, calculateCellsForAttack, roundToInt } from './utils';
-import { resolve } from 'core-js/stable/promise';
 
 export default class GameController {
   constructor(gamePlay, stateService) {
@@ -60,6 +62,8 @@ export default class GameController {
       case 4:
         currentTheme = themes.mountain;
         break;
+      default:
+        break;
     }
     return currentTheme;
   }
@@ -69,7 +73,7 @@ export default class GameController {
     const tbs = bs * 2;
     const occupiedPositions = [];
     const columns = [0, 1];
-    if (curTeam == this.rivalTeam) {
+    if (curTeam === this.rivalTeam) {
       columns[0] = bs - 2;
       columns[1] = bs - 1;
     }
@@ -101,9 +105,6 @@ export default class GameController {
     this.gamePlay.addLoadGameListener(this.onLoadGame.bind(this));
     this.gamePlay.addCellEnterListener(this.onCellEnter.bind(this));
     this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
-
-    //this.gameState.characters = this.positionedCharacters;
-    //this.stateService.save(this.gameState);
   }
 
   gameOver(byEndOfGame = true) {
@@ -112,7 +113,7 @@ export default class GameController {
         return true;
       }
     }
-    const res = new Promise((resolve, reject) => {
+    new Promise((resolve) => {
       if (this.selectedIndex > -1) {
         this.gamePlay.deselectCell(this.selectedIndex);
         this.selectedIndex = -1;
@@ -122,7 +123,7 @@ export default class GameController {
       this.gamePlay.cellClickListeners = [];
       this.gamePlay.cellEnterListeners = [];
       resolve();
-    }).then((value) => {
+    }).then(() => {
       setTimeout(() => {
         if (byEndOfGame) {
           if (this.score[0] > this.score[1]) {
@@ -164,21 +165,19 @@ export default class GameController {
     if (this.gameRound === this.rounds) {
       this.gameOver();
     } else {
-      const res = new Promise((resolve, reject) => {
+      new Promise((resolve) => {
         // повышаем всем здоровье и уровень выжившим персонажам
-        Array.from(this.playerTeam.characters).forEach((el) =>
-          el.increaseLevel(el.level + 1));
-        Array.from(this.rivalTeam.characters).forEach((el) =>
-          el.increaseLevel(el.level + 1));
+        Array.from(this.playerTeam.characters).forEach((el) => el.increaseLevel(el.level + 1));
+        Array.from(this.rivalTeam.characters).forEach((el) => el.increaseLevel(el.level + 1));
         if (this.selectedIndex > -1) {
           this.gamePlay.deselectCell(this.selectedIndex);
           this.selectedIndex = -1;
         }
         this.positionedCharacters = [];
-        //this.gamePlay.drawUi(this.theme);
+        // this.gamePlay.drawUi(this.theme);
         this.gamePlay.redrawPositions(this.positionedCharacters);
         resolve();
-      }).then((value) => {
+      }).then(() => {
         setTimeout(() => {
           if (youWin) {
             GamePlay.showMessage(`Вы выиграли этот раунд. Общий счет ${this.score[0]}:${this.score[1]}`);
@@ -194,8 +193,7 @@ export default class GameController {
   getCellsForMove(posCharacter) {
     const cells = calculateCellsForMove(posCharacter, this.gamePlay.boardSize);
     // перемещаться можно только на незанятые ячейки
-    this.cellsForMove = cells.filter((value) =>
-      (typeof Array.from(this.positionedCharacters).find((el) => el.position === value)) === 'undefined');
+    this.cellsForMove = cells.filter((value) => (typeof Array.from(this.positionedCharacters).find((el) => el.position === value)) === 'undefined');
   }
 
   getCellsForAttack(posCharacter) {
@@ -218,9 +216,9 @@ export default class GameController {
       if (target.character.health === 0) {
         this.died(target);
         if (this.playerAlive > 0 && this.rivalAlive > 0) {
-          console.log(`Player alive: ${this.playerAlive}, rival alive: ${this.rivalAlive}`);
+          // console.log(`Player alive: ${this.playerAlive}, rival alive: ${this.rivalAlive}`);
         } else {
-          console.log(`End of the round - Player alive: ${this.playerAlive}, rival alive: ${this.rivalAlive}`);
+          // console.log(`End of the round - Player alive: ${this.playerAlive}, rival alive: ${this.rivalAlive}`);
           this.nextRound(); // завершаем раунд или игру
           return;
         }
@@ -240,10 +238,10 @@ export default class GameController {
       this.selectedRedIndex = -1;
     }
     if (this.playerTeam.characters.indexOf(posCharacter.character) > -1) {
-      console.log('Атакован персонаж игрока');
+      // console.log('Атакован персонаж игрока');
       this.playerAlive -= 1;
     } else {
-      console.log('Атакован персонаж противника');
+      // console.log('Атакован персонаж противника');
       this.rivalAlive -= 1;
     }
     this.positionedCharacters.splice(this.positionedCharacters.indexOf(posCharacter), 1);
@@ -273,8 +271,7 @@ export default class GameController {
 
   rivalTurn() {
     // определяем кто в строю у соперника
-    const alive = Array.from(this.positionedCharacters).filter((element) =>
-      this.rivalTeam.characters.indexOf(element.character) > -1);
+    const alive = Array.from(this.positionedCharacters).filter((element) => this.rivalTeam.characters.indexOf(element.character) > -1);
     if (alive.length > 0) {
       // выбираем кандидата на выполнение атаки
       let candidate = null;
@@ -319,15 +316,15 @@ export default class GameController {
     const posCharacter = Array.from(this.positionedCharacters).find((el) => el.position === index);
     if (posCharacter) { // кликнули на занятую ячейку
       if (this.playerTeam.characters.indexOf(posCharacter.character) > -1) { // ячейка занята персонажем игрока
-        //const playerType = this.playerTypes.find((el) => posCharacter.character instanceof el);
-        //if (playerType) {
+        // const playerType = this.playerTypes.find((el) => posCharacter.character instanceof el);
+        // if (playerType) {
         if (this.selectedIndex !== -1) { // снимаем выделение с ранее выбранной ячейки
           this.gamePlay.deselectCell(this.selectedIndex);
         }
         this.gamePlay.selectCell(index);
         this.selectedIndex = index;
-        //this.gameState.selectedIndex = index;
-        //this.stateService.save(this.gameState);
+        // this.gameState.selectedIndex = index;
+        // this.stateService.save(this.gameState);
         // вычисляем доступные для перемещения и атаки поля
         this.getCellsForMove(posCharacter);
         this.getCellsForAttack(posCharacter);
@@ -384,10 +381,7 @@ export default class GameController {
   }
 
   onNewGame() {
-    if (!this.gameOver(false)) {
-      return;
-    }
-    //this.init();
+    this.gameOver(false);
   }
 
   onSaveGame() {
@@ -459,6 +453,5 @@ export default class GameController {
     this.selectedIndex = this.gameState.selectedIndex;
 
     this.onCellClick(this.gameState.selectedIndex);
-
   }
 }

@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import { roundToInt } from './utils';
 
 /**
@@ -35,8 +36,8 @@ export default class Character {
   increaseLevel(newLevel) {
     for (let i = this.level; i < newLevel; i += 1) {
       if (this.health > 1) {
-        this.attack = Math.max(this.attack, roundToInt(this.attack * (80 + this.health) / 100));
-        this.defence = Math.max(this.defence, roundToInt(this.defence * (80 + this.health) / 100));
+        this.attack = Math.max(this.attack, roundToInt((80 + this.health) * (this.attack / 100)));
+        this.defence = Math.max(this.defence, roundToInt((80 + this.health) * (this.defence / 100)));
         this.level += 1;
       }
       this.health = Math.min(this.health + 80, 100);

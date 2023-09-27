@@ -55,7 +55,7 @@ export function calcTileType(index, boardSize) {
 }
 
 export function roundToInt(value) {
-  return parseInt(Math.round(value).toFixed(0));
+  return parseInt(Math.round(value).toFixed(0), 10);
 }
 
 export function calcHealthLevel(health) {

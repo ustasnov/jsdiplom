@@ -1,3 +1,5 @@
+/* eslint-disable max-len */
+
 import Bowman from './Bowman';
 import Swordsman from './Swordsman';
 import Magician from './Magician';
@@ -8,13 +10,25 @@ import PositionedCharacter from './PositionedCharacter';
 
 export default class GameState {
   static from(object) {
+    const gameState = {
+      playerTeam: object.playerTeam,
+      rivalTeam: object.rivalTeam,
+      score: object.score,
+      gameRound: object.gameRound,
+      playerTurn: true,
+      playerAlive: object.playerAlive,
+      rivalAlive: object.rivalAlive,
+      characters: object.characters,
+      selectedIndex: object.selectedIndex,
+    };
+
     const characterTypesMap = {
-      'bowman': Bowman,
-      'swordsman': Swordsman,
-      'magician': Magician,
-      'vampire': Vampire,
-      'undead': Undead,
-      'daemon': Daemon
+      bowman: Bowman,
+      swordsman: Swordsman,
+      magician: Magician,
+      vampire: Vampire,
+      undead: Undead,
+      daemon: Daemon,
     };
 
     const playerTypes = ['bowman', 'swordsman', 'magician'];
@@ -31,17 +45,17 @@ export default class GameState {
     }
 
     function createPosCharacter(obj) {
-      const curCharacter = (playerTypes.indexOf(obj.character.type) > -1) ?
-        object.playerTeam.characters.find((el) => el.id === obj.character.id) :
-        object.rivalTeam.characters.find((el) => el.id === obj.character.id);
+      const curCharacter = (playerTypes.indexOf(obj.character.type) > -1)
+        ? gameState.playerTeam.characters.find((el) => el.id === obj.character.id)
+        : gameState.rivalTeam.characters.find((el) => el.id === obj.character.id);
       const ex = new PositionedCharacter(curCharacter, obj.position);
       return ex;
     }
 
-    object.playerTeam.characters = Array.from(object.playerTeam.characters).map((el) => el = createCharacter(el));
-    object.rivalTeam.characters = Array.from(object.rivalTeam.characters).map((el) => el = createCharacter(el));
-    object.characters = Array.from(object.characters).map((el) => el = createPosCharacter(el));
+    gameState.playerTeam.characters = Array.from(gameState.playerTeam.characters).map((el) => createCharacter(el));
+    gameState.rivalTeam.characters = Array.from(gameState.rivalTeam.characters).map((el) => createCharacter(el));
+    gameState.characters = Array.from(gameState.characters).map((el) => createPosCharacter(el));
 
-    return object;
+    return gameState;
   }
 }
