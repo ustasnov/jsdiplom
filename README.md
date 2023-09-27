@@ -1,3 +1,7 @@
+# RETRO GAME
+
+[![Build status](https://ci.appveyor.com/api/projects/status/a3wjtl6a5ubh57fq/branch/main?svg=true)](https://ci.appveyor.com/project/ustasnov/jsdiplom/branch/main)
+
 # Дипломное задание к курсу «Продвинутый JavaScript». Retro Game
 
 ###### tags: `netology` `advanced js`
@@ -175,7 +179,7 @@
 Укажите начальные характеристики каждого класса:
 
 | Класс     | attack | defence |
-|-----------|--------|---------|
+| --------- | ------ | ------- |
 | Bowman    | 25     | 25      |
 | Swordsman | 40     | 10      |
 | Magician  | 10     | 40      |
