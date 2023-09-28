@@ -1,3 +1,5 @@
+/* eslint-disable max-len */
+
 import {
   calcTileType, calcHealthLevel, calculateCellsForMove, calculateCellsForAttack,
 } from '../utils';
@@ -12,6 +14,13 @@ import Vampire from '../Vampire';
 import Team from '../Team';
 import Cell from '../Cell';
 import PositionedCharacter from '../PositionedCharacter';
+// import GameStateService from '../GameStateService';
+
+// jest.mock('../GameStateService');
+
+beforeEach(() => {
+  jest.resetAllMocks();
+});
 
 // utils functions test
 
@@ -212,6 +221,25 @@ test.each([
   },
 );
 
+test.each([
+  ['Bowman', 33, 33, 100, Bowman],
+  ['Swordsman', 52, 13, 100, Swordsman],
+  ['Magician', 13, 52, 100, Magician],
+  ['Daemon', 13, 13, 100, Daemon],
+  ['Undead', 52, 13, 100, Undead],
+  ['Vampire', 33, 33, 100, Vampire],
+])(
+  ('after increase level %s: attack value must be %s, defence value must be %s, health must be %s'),
+  (_, attack, defence, health, TypeClass) => {
+    const currentCharacter = new TypeClass(1);
+    currentCharacter.increaseLevel(2);
+    const sourseObject = { attack: currentCharacter.attack, defence: currentCharacter.defence, health: currentCharacter.health };
+    const destObject = { attack, defence, health };
+
+    expect(sourseObject).toEqual(destObject);
+  },
+);
+
 // PositionedCharacter test
 
 test('character must be instance of Character or its children', () => {
@@ -229,3 +257,8 @@ test('should not instantiate Character class', () => {
   }
   expect(createPosCharacter).toThrow(Error('position must be a number'));
 });
+
+// GameStateService test
+// test('shoul call load method', () => {
+//  GameStateService.mock
+// });

@@ -23,7 +23,6 @@ export default class Character {
     this.health = 50;
     this.type = type;
     this.id = -1;
-    // TODO: выбросите исключение, если кто-то использует "new Character()"
     if (new.target.name === 'Character') {
       throw new Error('You cannot instantiate this class!');
     }
@@ -35,11 +34,9 @@ export default class Character {
 
   increaseLevel(newLevel) {
     for (let i = this.level; i < newLevel; i += 1) {
-      if (this.health > 1) {
-        this.attack = Math.max(this.attack, roundToInt((80 + this.health) * (this.attack / 100)));
-        this.defence = Math.max(this.defence, roundToInt((80 + this.health) * (this.defence / 100)));
-        this.level += 1;
-      }
+      this.attack = Math.max(this.attack, roundToInt((80 + this.health) * (this.attack / 100)));
+      this.defence = Math.max(this.defence, roundToInt((80 + this.health) * (this.defence / 100)));
+      this.level += 1;
       this.health = Math.min(this.health + 80, 100);
     }
   }
