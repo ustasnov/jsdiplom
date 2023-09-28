@@ -1,4 +1,5 @@
 /* eslint-disable max-len */
+/* eslint-disable func-names */
 
 import {
   calcTileType, calcHealthLevel, calculateCellsForMove, calculateCellsForAttack,
@@ -14,12 +15,21 @@ import Vampire from '../Vampire';
 import Team from '../Team';
 import Cell from '../Cell';
 import PositionedCharacter from '../PositionedCharacter';
-// import GameStateService from '../GameStateService';
-
-// jest.mock('../GameStateService');
+import GameStateService from '../GameStateService';
 
 beforeEach(() => {
   jest.resetAllMocks();
+});
+
+jest.mock('../GameStateService', () => function (storage) {
+  return {
+    load: () => {
+      if (storage) {
+        return JSON.parse(storage);
+      }
+      throw new Error('Invalid state');
+    },
+  };
 });
 
 // utils functions test
@@ -258,7 +268,21 @@ test('should not instantiate Character class', () => {
   expect(createPosCharacter).toThrow(Error('position must be a number'));
 });
 
-// GameStateService test
-// test('shoul call load method', () => {
-//  GameStateService.mock
-// });
+// GameStateService test with mock
+
+test('shoul call GameStateService load method mock', () => {
+  const destObj = { score: '1:0', gameRound: 1 };
+  const storage = JSON.stringify(destObj);
+  const gameStateService = new GameStateService(storage);
+  const sourceObj = gameStateService.load();
+  expect(sourceObj).toEqual(destObj);
+});
+
+test('shoul GameStateService load method mock throw exception', () => {
+  function testMock() {
+    const gameStateService = new GameStateService(undefined);
+    const sourceObj = gameStateService.load();
+    return sourceObj;
+  }
+  expect(testMock).toThrow(new Error('Invalid state'));
+});
