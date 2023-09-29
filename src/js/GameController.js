@@ -25,7 +25,7 @@ export default class GameController {
 
   get theme() {
     let currentTheme = 'prairie';
-    switch (this.gameRound) {
+    switch (this.gameState.gameRound) {
       case 2:
         currentTheme = themes.desert;
         break;
