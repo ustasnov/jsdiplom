@@ -4,7 +4,6 @@
 import {
   calcTileType, calcHealthLevel, calculateCellsForMove, calculateCellsForAttack,
 } from '../utils';
-import { generateTeam } from '../generators';
 import Character from '../Character';
 import Bowman from '../Bowman';
 import Swordsman from '../Swordsman';
@@ -120,7 +119,8 @@ test('shuld getCellsForAttack function return array with correct cells indexes',
 
 test('shuld create team', () => {
   const destArray = [new Bowman(2), new Swordsman(1), new Magician(2)];
-  const team = new Team(destArray);
+  const team = new Team();
+  team.characters = destArray;
 
   expect(team.characters).toEqual(destArray);
 });
@@ -130,7 +130,7 @@ test('shuld create team', () => {
 test('shuld generate team with correct count of characters', () => {
   const characterCount = 4;
   const allowedTypes = [Bowman, Swordsman, Magician];
-  const team = generateTeam(allowedTypes, 2, characterCount);
+  const team = Team.create(0, allowedTypes, 2, characterCount);
 
   expect(team.characters.length).toBe(characterCount);
 });
@@ -138,7 +138,7 @@ test('shuld generate team with correct count of characters', () => {
 test('shuld generate team with correct type of characters', () => {
   const characterCount = 4;
   const allowedTypes = [Bowman, Swordsman, Magician];
-  const team = generateTeam(allowedTypes, 2, characterCount);
+  const team = Team.create(0, allowedTypes, 2, characterCount);
 
   let correct = true;
   for (let i = 0; i < characterCount; i += 1) {

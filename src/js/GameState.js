@@ -5,7 +5,7 @@ import Team from './Team';
 
 export default class GameState {
   constructor() {
-    this.teams = [null, null]
+    this.teams = [null, null];
     this.score = [0, 0];
     this.gameRound = 0;
     this.playerTurn = true;

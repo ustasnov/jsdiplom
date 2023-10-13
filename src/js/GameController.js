@@ -15,7 +15,7 @@ import GamePlay from './GamePlay';
 import cursors from './cursors';
 import GameState from './GameState';
 import Team from './Team';
-import { randomInteger, generateTeam } from './generators';
+import { randomInteger } from './generators';
 import { calculateCellsForMove, calculateCellsForAttack, roundToInt } from './utils';
 
 export default class GameController {
@@ -31,12 +31,17 @@ export default class GameController {
     this.gameState = new GameState();
     this.chractersTypes = [
       [Bowman, Swordsman, Magician],
-      [Vampire, Undead, Daemon]
+      [Vampire, Undead, Daemon],
     ];
   }
 
   get theme() {
-    return Object.values(themes)[this.gameState.gameRound - 1] ?? themes.prairie;
+    let curTheme = Object.values(themes)[this.gameState.gameRound - 1];
+    if (!curTheme) {
+      curTheme = themes.prairie;
+    }
+    // return Object.values(themes)[this.gameState.gameRound - 1] ?? themes.prairie;
+    return curTheme;
   }
 
   placeTeam(curTeam) {

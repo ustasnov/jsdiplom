@@ -1,3 +1,5 @@
+/* eslint-disable import/no-cycle */
+
 import Bowman from './Bowman';
 import Swordsman from './Swordsman';
 import Magician from './Magician';
@@ -7,13 +9,13 @@ import Daemon from './Daemon';
 import { characterGenerator } from './generators';
 
 const characterTypes = {
-  'bowman': Bowman,
-  'swordsman': Swordsman,
-  'magician': Magician,
-  'vampire': Vampire,
-  'undead': Undead,
-  'daemon': Daemon
-}
+  bowman: Bowman,
+  swordsman: Swordsman,
+  magician: Magician,
+  vampire: Vampire,
+  undead: Undead,
+  daemon: Daemon,
+};
 
 export default class Team {
   constructor(id = 0) {
@@ -26,7 +28,7 @@ export default class Team {
   }
 
   increaseCharactersLevel() {
-    Array.from(this.characters).forEach((el) => el.increaseLevel(el.level + 1))
+    Array.from(this.characters).forEach((el) => el.increaseLevel(el.level + 1));
   }
 
   static create(id, playerTypes, maxLevel, characterCount) {
@@ -48,7 +50,7 @@ export default class Team {
   }
 
   static restore(obj) {
-    const team = new Team(obj.id)
+    const team = new Team(obj.id);
     team.characters = Array.from(obj.characters).map((el) => Team.restoreCharacter(el));
     return team;
   }
