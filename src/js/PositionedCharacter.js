@@ -13,4 +13,10 @@ export default class PositionedCharacter {
     this.character = character;
     this.position = position;
   }
+
+  static restore(obj, team) {
+    const curCharacter = Array.from(team.characters).find((el) => el.id === obj.character.id);
+    const ex = new PositionedCharacter(curCharacter, obj.position);
+    return ex;
+  }
 }

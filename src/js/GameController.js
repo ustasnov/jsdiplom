@@ -3,16 +3,24 @@
 /* eslint-disable no-alert */
 
 import themes from './themes';
+import Bowman from './Bowman';
+import Swordsman from './Swordsman';
+import Magician from './Magician';
+import Vampire from './Vampire';
+import Undead from './Undead';
+import Daemon from './Daemon';
 import PositionedCharacter from './PositionedCharacter';
 import Cell from './Cell';
 import GamePlay from './GamePlay';
 import cursors from './cursors';
 import GameState from './GameState';
+import Team from './Team';
 import { randomInteger, generateTeam } from './generators';
 import { calculateCellsForMove, calculateCellsForAttack, roundToInt } from './utils';
 
 export default class GameController {
   constructor(gamePlay, stateService) {
+    this.characterCount = 4;
     this.gamePlay = gamePlay;
     this.stateService = stateService;
     this.rounds = 4;
@@ -21,24 +29,14 @@ export default class GameController {
     this.cellsForMove = [];
     this.cellsForAttack = [];
     this.gameState = new GameState();
+    this.chractersTypes = [
+      [Bowman, Swordsman, Magician],
+      [Vampire, Undead, Daemon]
+    ];
   }
 
   get theme() {
-    let currentTheme = 'prairie';
-    switch (this.gameState.gameRound) {
-      case 2:
-        currentTheme = themes.desert;
-        break;
-      case 3:
-        currentTheme = themes.arctic;
-        break;
-      case 4:
-        currentTheme = themes.mountain;
-        break;
-      default:
-        break;
-    }
-    return currentTheme;
+    return Object.values(themes)[this.gameState.gameRound - 1] ?? themes.prairie;
   }
 
   placeTeam(curTeam) {
@@ -46,7 +44,7 @@ export default class GameController {
     const tbs = bs * 2;
     const occupiedPositions = [];
     const columns = [0, 1];
-    if (curTeam === this.gameState.rivalTeam) {
+    if (curTeam === this.gameState.teams[1]) {
       columns[0] = bs - 2;
       columns[1] = bs - 1;
     }
@@ -88,13 +86,11 @@ export default class GameController {
     this.gameState.score[0] = 0;
     this.gameState.score[1] = 0;
 
-    const playerTypes = Object.getOwnPropertyNames(this.gameState.playerTypes).map((el) => this.gameState.playerTypes[el]);
-    const rivalTypes = Object.getOwnPropertyNames(this.gameState.rivalTypes).map((el) => this.gameState.rivalTypes[el]);
+    for (let i = 0; i < this.gameState.teams.length; i += 1) {
+      this.gameState.teams[i] = Team.create(i, this.chractersTypes[i], 2, this.characterCount);
+    }
 
-    this.gameState.playerTeam = generateTeam(playerTypes, 2, 4); // создаем команду игрока
-    this.gameState.rivalTeam = generateTeam(rivalTypes, 2, 4); // создаем команду противника
     this.startRound();
-
     this.addListeners();
   }
 
@@ -104,29 +100,26 @@ export default class GameController {
         return true;
       }
     }
-    new Promise((resolve) => {
-      if (this.gameState.selectedIndex > -1) {
-        this.gamePlay.deselectCell(this.gameState.selectedIndex);
-        this.gameState.selectedIndex = -1;
-      }
-      this.gameState.positionedCharacters = [];
-      this.gamePlay.redrawPositions(this.gameState.positionedCharacters);
-      this.clearMouseListeners();
-      resolve();
-    }).then(() => {
-      setTimeout(() => {
-        if (byEndOfGame) {
-          if (this.gameState.score[0] > this.gameState.score[1]) {
-            GamePlay.showMessage(`Игра окончена: вы выиграли. Общий счет ${this.gameState.score[0]}:${this.gameState.score[1]}`);
-          } else {
-            GamePlay.showMessage(`Игра окончена: вы проиграги. Общий счет ${this.gameStateis.score[0]}:${this.gameState.score[1]}`);
-          }
+    if (this.gameState.selectedIndex > -1) {
+      this.gamePlay.deselectCell(this.gameState.selectedIndex);
+      this.gameState.selectedIndex = -1;
+    }
+    this.gameState.positionedCharacters = [];
+    this.gamePlay.redrawPositions(this.gameState.positionedCharacters);
+    this.clearMouseListeners();
+
+    setTimeout(() => {
+      if (byEndOfGame) {
+        if (this.gameState.score[0] > this.gameState.score[1]) {
+          GamePlay.showMessage(`Игра окончена: вы выиграли. Общий счет ${this.gameState.score[0]}:${this.gameState.score[1]}`);
         } else {
-          this.clearButtonsListeners();
-          this.init();
+          GamePlay.showMessage(`Игра окончена: вы проиграги. Общий счет ${this.gameStateis.score[0]}:${this.gameState.score[1]}`);
         }
-      }, 200);
-    });
+      } else {
+        this.clearButtonsListeners();
+        this.init();
+      }
+    }, 200);
     return true;
   }
 
@@ -137,43 +130,40 @@ export default class GameController {
     this.gameState.rivalAlive = 4;
     this.gameState.positionedCharacters = [];
     this.gamePlay.drawUi(this.theme);
-    this.placeTeam(this.gameState.playerTeam); // размещаем команду игрока
-    this.placeTeam(this.gameState.rivalTeam); // размещаем команду противника
+    // размещаем команды
+    for (let i = 0; i < this.gameState.teams.length; i += 1) {
+      this.placeTeam(this.gameState.teams[i]);
+    }
     this.gamePlay.redrawPositions(this.gameState.positionedCharacters);
   }
 
   nextRound() {
-    let youWin = true;
-    if (this.gameState.playerTeam.characters.indexOf(this.gameState.positionedCharacters[0].character) > -1) {
-      this.gameState.score[0] += 1;
-    } else {
-      this.gameState.score[1] += 1;
-      youWin = false;
-    }
+    this.gameState.score[this.gameState.positionedCharacters[0].character.teamId] += 1;
+    const youWin = this.gameState.positionedCharacters[0].character.teamId === 0;
+
     if (this.gameState.gameRound === this.rounds) {
       this.gameOver();
     } else {
-      new Promise((resolve) => {
-        // повышаем всем здоровье и уровень выжившим персонажам
-        Array.from(this.gameState.playerTeam.characters).forEach((el) => el.increaseLevel(el.level + 1));
-        Array.from(this.gameState.rivalTeam.characters).forEach((el) => el.increaseLevel(el.level + 1));
-        if (this.gameState.selectedIndex > -1) {
-          this.gamePlay.deselectCell(this.gameState.selectedIndex);
-          this.gameState.selectedIndex = -1;
+      // повышаем всем здоровье и уровень выжившим персонажам
+      for (let i = 0; i < this.gameState.teams.length; i += 1) {
+        this.gameState.teams[i].increaseCharactersLevel();
+      }
+
+      if (this.gameState.selectedIndex > -1) {
+        this.gamePlay.deselectCell(this.gameState.selectedIndex);
+        this.gameState.selectedIndex = -1;
+      }
+      this.gameState.positionedCharacters = [];
+      this.gamePlay.redrawPositions(this.gameState.positionedCharacters);
+
+      setTimeout(() => {
+        if (youWin) {
+          GamePlay.showMessage(`Вы выиграли этот раунд. Общий счет ${this.gameState.score[0]}:${this.gameState.score[1]}`);
+        } else {
+          GamePlay.showMessage(`Вы проиграли этот раунд. Общий счет ${this.gameState.score[0]}:${this.gameState.score[1]}`);
         }
-        this.gameState.positionedCharacters = [];
-        this.gamePlay.redrawPositions(this.gameState.positionedCharacters);
-        resolve();
-      }).then(() => {
-        setTimeout(() => {
-          if (youWin) {
-            GamePlay.showMessage(`Вы выиграли этот раунд. Общий счет ${this.gameState.score[0]}:${this.gameState.score[1]}`);
-          } else {
-            GamePlay.showMessage(`Вы проиграли этот раунд. Общий счет ${this.gameState.score[0]}:${this.gameState.score[1]}`);
-          }
-          this.startRound(); // стартуем следующий раунд
-        }, 200);
-      });
+        this.startRound(); // стартуем следующий раунд
+      }, 200);
     }
   }
 
@@ -221,7 +211,7 @@ export default class GameController {
       this.gamePlay.deselectCell(this.selectedRedIndex);
       this.selectedRedIndex = -1;
     }
-    if (this.gameState.playerTeam.characters.indexOf(posCharacter.character) > -1) {
+    if (this.gameState.teams[0].has(posCharacter.character)) {
       this.gameState.playerAlive -= 1;
     } else {
       this.gameState.rivalAlive -= 1;
@@ -235,7 +225,7 @@ export default class GameController {
     const targets = Array.from(this.cellsForAttack).filter((cell) => {
       const posCharacter = Array.from(this.gameState.positionedCharacters).find((element) => element.position === cell);
       if (posCharacter) {
-        return this.gameState.playerTeam.characters.indexOf(posCharacter.character) > -1;
+        return this.gameState.teams[0].has(posCharacter.character);
       }
       return false;
     });
@@ -253,7 +243,7 @@ export default class GameController {
 
   rivalTurn() {
     // определяем кто в строю у соперника
-    const alive = Array.from(this.gameState.positionedCharacters).filter((element) => this.gameState.rivalTeam.characters.indexOf(element.character) > -1);
+    const alive = Array.from(this.gameState.positionedCharacters).filter((element) => this.gameState.teams[1].has(element.character));
     if (alive.length > 0) {
       // выбираем кандидата на выполнение атаки
       let candidate = null;
@@ -297,7 +287,7 @@ export default class GameController {
     }
     const posCharacter = Array.from(this.gameState.positionedCharacters).find((el) => el.position === index);
     if (posCharacter) { // кликнули на занятую ячейку
-      if (this.gameState.playerTeam.characters.indexOf(posCharacter.character) > -1) { // ячейка занята персонажем игрока
+      if (this.gameState.teams[0].has(posCharacter.character)) { // ячейка занята персонажем игрока
         if (this.gameState.selectedIndex !== -1) { // снимаем выделение с ранее выбранной ячейки
           this.gamePlay.deselectCell(this.gameState.selectedIndex);
         }
@@ -332,9 +322,9 @@ export default class GameController {
     }
     const posCharacter = Array.from(this.gameState.positionedCharacters).find((el) => el.position === index);
     if (posCharacter) {
-      if (this.gameState.playerTeam.characters.indexOf(posCharacter.character) !== -1) { // персонаж игрока
+      if (this.gameState.teams[0].has(posCharacter.character)) { // персонаж игрока
         this.gamePlay.setCursor(cursors.pointer);
-      } else if (this.gameState.rivalTeam.characters.indexOf(posCharacter.character) !== -1) { // персонаж противника
+      } else if (this.gameState.teams[1].has(posCharacter.character)) { // персонаж противника
         if (this.cellsForAttack.indexOf(posCharacter.position) !== -1 && this.gameState.selectedIndex !== -1) { // выбран персонаж игрока и персонаж противника доступен для атаки
           this.gamePlay.setCursor(cursors.crosshair);
           this.gamePlay.selectCell(index, 'red');
@@ -391,7 +381,7 @@ export default class GameController {
 
     this.selectedGreenIndex = -1;
     this.selectedRedIndex = -1;
-    this.selectedIndex = -1;
+    this.gameState.selectedIndex = -1;
 
     this.clearButtonsListeners();
     this.clearMouseListeners();
