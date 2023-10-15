@@ -40,7 +40,6 @@ export default class GameController {
     if (!curTheme) {
       curTheme = themes.prairie;
     }
-    // return Object.values(themes)[this.gameState.gameRound - 1] ?? themes.prairie;
     return curTheme;
   }
 

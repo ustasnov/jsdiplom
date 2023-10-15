@@ -125,6 +125,31 @@ test('shuld create team', () => {
   expect(team.characters).toEqual(destArray);
 });
 
+test('should check if there is a character on the team', () => {
+  const destArray = [new Bowman(2), new Swordsman(1), new Magician(2)];
+  const team = new Team();
+  team.characters = destArray;
+
+  expect(team.has(destArray[0])).toBeTruthy();
+});
+
+test('should check if a character is missing from the team', () => {
+  const destArray = [new Bowman(2), new Swordsman(1), new Magician(2)];
+  const team = new Team();
+  team.characters = destArray;
+
+  expect(team.has(new Vampire(1))).not.toBeTruthy();
+});
+
+test('should check character level increase', () => {
+  const sourceArray = [new Bowman(1), new Swordsman(1), new Magician(1)];
+  const team = new Team();
+  team.characters = sourceArray;
+  team.increaseCharactersLevel();
+
+  expect(team.characters[0].level).toBe(2);
+});
+
 // generators functions test
 
 test('shuld generate team with correct count of characters', () => {
@@ -149,6 +174,17 @@ test('shuld generate team with correct type of characters', () => {
   }
 
   expect(correct).toBe(true);
+});
+
+test('should check to restore correct team', () => {
+  const characterCount = 4;
+  const allowedTypes = [Bowman, Swordsman, Magician];
+  const sourceTeam = Team.create(0, allowedTypes, 2, characterCount);
+  const str = JSON.stringify(sourceTeam);
+  const obj = JSON.parse(str);
+  const destTeam = Team.restore(obj);
+
+  expect(sourceTeam).toEqual(destTeam);
 });
 
 // Cell test
@@ -266,6 +302,16 @@ test('should not instantiate Character class', () => {
     return posCharacter;
   }
   expect(createPosCharacter).toThrow(Error('position must be a number'));
+});
+
+test('should check the restoration of the correct positioned character', () => {
+  const allowedTypes = [Bowman];
+  const sourceTeam = Team.create(0, allowedTypes, 1, 1);
+  const sourceCharacter = new PositionedCharacter(sourceTeam.characters[0], 8);
+  const str = JSON.stringify(sourceCharacter);
+  const obj = JSON.parse(str);
+
+  expect(sourceCharacter).toEqual(PositionedCharacter.restore(obj, sourceTeam));
 });
 
 // GameStateService test with mock
