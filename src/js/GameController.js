@@ -36,11 +36,7 @@ export default class GameController {
   }
 
   get theme() {
-    let curTheme = Object.values(themes)[this.gameState.gameRound - 1];
-    if (!curTheme) {
-      curTheme = themes.prairie;
-    }
-    return curTheme;
+    return Object.values(themes)[this.gameState.gameRound - 1] ?? themes.prairie;
   }
 
   placeTeam(curTeam) {
